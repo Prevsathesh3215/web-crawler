@@ -7,6 +7,11 @@ from urllib.parse import urljoin, urlparse, urlunparse
 from collections import deque
 import time
 import re
+import networkx as nx
+import json
+from pyvis.network import Network
+from IPython.display import IFrame
+
 
 #BOOKS TO SCRAPE
 # url = "https://books.toscrape.com/"
@@ -14,17 +19,63 @@ import re
 #WIKIPEDIA: EARTH
 url = "https://en.wikipedia.org/wiki/Earth"
 
+#ATHEX GROUP STOCKS
+# url = "https://www.athexgroup.gr/en"
+
 domain = urlparse(url).netloc
-depth_control = 8
 
 article_path = "//article"
 article_link = "h3/a/@href"
-all_links = "//table[contains(@class,'infobox')]//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]/@href"
+all_links_xpath = "//table[contains(@class,'infobox')]//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]/@href"
 all_summaries = "//p"
 headers = {
     "User-Agent": "MyKnowledgeGraphBot/1.0 (prevsathesh3215@gmail.com)"
 }
 
+#PYVIS
+def visualize_graph(graph):
+    net = Network(
+        height="750px",
+        width="100%",
+        directed=True,
+        notebook=True,
+        cdn_resources="in_line"  
+    )
+
+    for node, data in graph.nodes(data=True):
+        net.add_node(
+            node,
+            label=node,
+            title=data.get("summary", ""),
+            size=20
+        )
+
+    for source, target in graph.edges():
+        net.add_edge(source, target)
+
+    net.show("knowledge_graph.html")
+    IFrame("knowledge_graph.html", width=900, height=600)
+
+
+
+#KNOWLEDGE GRAPH CLASS
+class KnowledgeGraph:
+    def __init__(self):
+        self.graph = nx.DiGraph()
+
+    def build_graph(self, pages):
+        for page in pages:
+            title = page["title"]
+
+            self.graph.add_node(title)
+
+            for link in page["links"]:
+                target = link.split("/wiki/")[-1]
+
+                self.graph.add_edge(title, target)
+
+
+#CRAWLER CLASSES
 class Frontier:
   def __init__(self):
     self.queue = deque()
@@ -61,12 +112,15 @@ class LinkExtractor:
     def extract_summary(html_content):
         tree = html.fromstring(html_content)
 
-        paragraphs = tree.xpath("//div[@class='mw-parser-output']/p[not(@class)]")
+        paragraphs = tree.xpath("//*[@id='mw-content-text']//div[contains(@class,'mw-parser-output')]/p[not(@class)][1]")
 
         raw_text = " ".join([p.text_content() for p in paragraphs])
 
         raw_text = re.sub(r"\[\d+\]", "", raw_text)
         raw_text = re.sub(r"\s+", " ", raw_text)
+
+        # print(raw_text)
+        # print("Summary extracted", raw_text)
 
         return " ".join(raw_text.split()[:200])
 
@@ -137,15 +191,20 @@ class Page:
 
         self.child_links = self.sanitizer.sanitize(self.url, raw_links)
 
+        print("Title:", self.title)
+        print("Summary:", self.summary[:100])
+
         each_page_data.append({
             "title": self.title,
             "url": self.url,
             "summary": self.summary,
-            "links": self.child_links
+            "links": self.child_links[:20]
         })
 
-        print("Title:", self.title)
-        print("Summary:", self.summary[:100])
+        # print(each_page_data)
+
+        # print("Title:", self.title)
+        # print("Summary:", self.summary[:100])
 
 
 
@@ -165,10 +224,36 @@ class CrawlerEngine:
     self.sanitizer = LinkSanitizer(domain)
 
 
-  def start_crawl(self):
-    for i in range(self.depth_control):
-      time.sleep(7)
+  def store_data(self):
+    with open("pages.json", "w") as f:
+      json.dump(self.each_page_data, f, indent=2)
 
+  def start_crawl_bfs(self):
+
+    depth = 0
+
+    while self.frontier.queue and depth < self.depth_control:
+
+        current_url = self.frontier.get_next()
+
+        print("\nAccessing site:", current_url)
+
+        page = Page(current_url, self.client, self.extractor, self.sanitizer)
+        page.crawl(self.each_page_data)
+
+        for link in page.child_links:
+            self.frontier.add_url(link)
+
+        depth += 1
+        time.sleep(7)
+
+    print("\nFINAL DATA:")
+    print(self.each_page_data)
+
+
+
+  def start_crawl_number(self):
+    for i in range(self.depth_control):
       current_url = self.frontier.get_next()
       print("\nAccessing site: ", current_url)
       self.accessed_sites.append(current_url)
@@ -184,15 +269,29 @@ class CrawlerEngine:
         # print(frontier)
 
 
-      print("\nGathered sites: ", len(self.frontier.visited))
+      # print("\nGathered sites: ", len(self.frontier.visited))
       # print("\nAccessed sites: ", len(self.accessed_sites))
-      print("\nEach page data: ", self.each_page_data)
+      # print("\nEach page data: ", self.each_page_data)
 
-      for i in self.frontier.visited:
-        print(i)
+      for site in self.frontier.visited:
+        print(site)
+
+      time.sleep(7)
+
 
 
 
 if __name__ == "__main__":
-  crawler = CrawlerEngine(depth_control, url, all_links)
-  crawler.start_crawl()
+  depth_control = 50
+  crawler = CrawlerEngine(depth_control, url, all_links_xpath)
+  crawler.start_crawl_bfs()
+  crawler.store_data()
+
+  kg = KnowledgeGraph()
+  kg.build_graph(crawler.each_page_data)
+
+  visualize_graph(kg.graph)
+
+
+
+
