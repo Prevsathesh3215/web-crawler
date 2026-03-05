@@ -17,29 +17,14 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 
 
-
-#BOOKS TO SCRAPE
-# url = "https://books.toscrape.com/"
-
-#WIKIPEDIA: EARTH
-# url = "https://en.wikipedia.org/wiki/Earth"
-
-#WIKIPEDIA: JESUS
-url  = "https://en.wikipedia.org/wiki/Jesus"
-
-#ATHEX GROUP STOCKS
-# url = "https://www.athexgroup.gr/en"
-
-domain = urlparse(url).netloc
-
 article_path = "//article"
 article_link = "h3/a/@href"
-# all_links_xpath = "//table[contains(@class,'infobox')]//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]/@href"
-all_links_xpath = """
-//table[contains(@class,'infobox')]//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]
-|
-//*[@id='mw-content-text']//div[contains(@class,'mw-parser-output')]/p//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]
-"""
+all_links_xpath = "//table[contains(@class,'infobox')]//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]/@href"
+# all_links_xpath = """
+# //table[contains(@class,'infobox')]//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]
+# |
+# //*[@id='mw-content-text']//div[contains(@class,'mw-parser-output')]/p//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]
+# """
 all_summaries = "//p"
 headers = {
     "User-Agent": "MyKnowledgeGraphBot/1.0 (prevsathesh3215@gmail.com)"
@@ -121,13 +106,12 @@ class Frontier:
 
 class HttpClient:
   def fetch(self, url):
-    response = req.get(url, headers=headers, timeout=2)
+    response = req.get(url, headers=headers, timeout=5)
     response.raise_for_status()
     return response.text
 
 
 class LinkExtractor:
-
     @staticmethod
     def extract_links(html_content, xpath_rule):
         tree = html.fromstring(html_content)
@@ -161,32 +145,46 @@ class LinkExtractor:
 class LinkSanitizer:
     def __init__(self, domain):
         self.domain = domain
+        print(self.domain)
 
     def sanitize(self, base_url, links):
-        seen = set()
-        result = []
+      seen = set()
+      result = []
 
-        for link in links:
-            if not link or link.startswith("#"):
-                continue
+      for link in links:
 
-            absolute = urljoin(base_url, link)
-            parsed = urlparse(absolute)
+          # Extract href safely
+          if hasattr(link, "get"):
+              href = link.get("href")
+          else:
+              href = str(link)
 
-            if parsed.netloc != self.domain:
-                continue
+          if not href:
+              continue
 
-            final_url = parsed._replace(fragment="").geturl()
+          if href.startswith("#"):
+              continue
 
-            if "/category/" in final_url:
-                continue
+          href = str(href)   # 🔥 force string
 
-            if final_url not in seen:
-                seen.add(final_url)
-                result.append(final_url)
+          absolute = urljoin(str(base_url), href)
+          parsed = urlparse(absolute)
 
-        return result
+          if parsed.netloc != self.domain:
+              continue
 
+          final_url = parsed._replace(fragment="").geturl()
+
+          if "/category/" in final_url:
+              continue
+
+          if final_url not in seen:
+              seen.add(final_url)
+              result.append(final_url)
+
+      return result
+
+      
 class Page:
     def __init__(self, url, client, extractor, sanitizer):
         if not url:
@@ -206,10 +204,53 @@ class Page:
 
         html_content = self.client.fetch(self.url)
 
+        #DEFAULT XPATH
+        # raw_links = LinkExtractor.extract_links(
+        #     html_content,
+        #     "//table[contains(@class,'infobox')]//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]/@href"
+        # )
+
+
         raw_links = LinkExtractor.extract_links(
             html_content,
-            "//table[contains(@class,'infobox')]//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]/@href"
+            """
+            //div[contains(@class,'mw-parser-output')]
+            //p//a[starts-with(@href,'/wiki/')
+            and not(contains(@href,':'))]
+            """
         )
+
+        #ALT 1 
+        # raw_links = LinkExtractor.extract_links(
+        #     html_content,
+        #     """
+        #     //table[contains(@class,'infobox')]//a[
+        #         starts-with(@href,'/wiki/')
+        #         and not(contains(@href,':'))
+        #     ]/@href
+        #     |
+        #     //div[@class='mw-parser-output']//p//a[
+        #         starts-with(@href,'/wiki/')
+        #         and not(contains(@href,':'))
+        #     ]/@href
+        #     |
+        #     //div[@class='mw-parser-output']//li//a[
+        #         starts-with(@href,'/wiki/')
+        #         and not(contains(@href,':'))
+        #     ]/@href
+        #     """
+        # )
+
+
+        #ALT 2 
+        # raw_links = LinkExtractor.extract_links(
+        #     html_content,
+        #     """
+        #     //table[contains(@class,'infobox')]//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]
+        #     |
+        # //*[@id='mw-content-text']//div[contains(@class,'mw-parser-output')]/p//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]
+        #     """
+        # )
 
         self.summary = LinkExtractor.extract_summary(html_content)
         self.title = LinkExtractor.extract_title(html_content)
@@ -218,6 +259,7 @@ class Page:
 
         print("Title:", self.title)
         print("Summary:", self.summary[:100])
+        print("Extracted links count:", len(self.child_links))
 
         each_page_data.append({
             "title": self.title,
@@ -348,7 +390,28 @@ class CrawlerEngine:
 
 
 if __name__ == "__main__":
-  depth_control = 80
+
+  
+  #BOOKS TO SCRAPE
+  # url = "https://books.toscrape.com/"
+
+  # #WIKIPEDIA: EARTH
+  # url = "https://en.wikipedia.org/wiki/Earth"
+
+  #WIKIPEDIA: JESUS
+  # url  = "https://en.wikipedia.org/wiki/Jesus"
+
+  #ATHEX GROUP STOCKS
+  # url = "https://www.athexgroup.gr/en"
+
+  #ARTIFICAL INTELLIGENCE
+  # url = "https://en.wikipedia.org/wiki/Artificial_intelligence"
+
+  url = "https://en.wikipedia.org/wiki/Human_intelligence"
+
+  domain = urlparse(url).netloc
+
+  depth_control = 150
 
   crawler = CrawlerEngine(depth_control, url, all_links_xpath)
   crawler.start_crawl_bfs()
