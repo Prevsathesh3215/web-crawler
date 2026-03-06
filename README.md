@@ -1,7 +1,9 @@
-# web-crawler
+# WikiWeb-Crawler
 
 
-A web-crawler project that I developed when trying to learn more about XPath, which lead to crawlers and data analysis. Made with python.
+A web-crawler project that I developed when trying to learn more about XPath, which lead to crawlers and data analysis. Made with Python.
+
+For now, the crawler can only crawl Wikipedia pages, will return error for any other pages, will add support for that soon. Crawler filters out first 10 links in the page, and accesses them with BFS.
 
 ## Features
 
