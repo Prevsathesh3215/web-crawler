@@ -1,0 +1,9 @@
+aiohttp
+lxml
+networkx
+numpy
+pyvis
+requests
+sentence-transformers
+torch
+ipython

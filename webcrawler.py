@@ -15,6 +15,12 @@ import unicodedata
 import heapq
 from sentence_transformers import SentenceTransformer
 import numpy as np
+from crawler_engine.frontier import Frontier
+from crawler_engine.httpclient import HttpClient
+from crawler_engine.link_extractor import LinkExtractor
+from crawler_engine.link_sanitizer import LinkSanitizer
+from crawler_engine.page import Page
+from knowledge_graph.visualiser import KnowledgeGraph, visualize_graph
 
 
 article_path = "//article"
@@ -30,251 +36,7 @@ headers = {
     "User-Agent": "MyKnowledgeGraphBot/1.0 (prevsathesh3215@gmail.com)"
 }
 
-#PYVIS
-def visualize_graph(graph):
-    net = Network(
-        height="750px",
-        width="100%",
-        directed=True,
-        notebook=True,
-        cdn_resources="in_line"  
-    )
-
-    for node, data in graph.nodes(data=True):
-        net.add_node(
-            node,
-            label=node,
-            title=data.get("summary", ""),
-            size=20
-        )
-
-    for source, target in graph.edges():
-        net.add_edge(source, target)
-
-    net.show("knowledge_graph.html")
-    IFrame("knowledge_graph.html", width=900, height=600)
-
-
-
-#KNOWLEDGE GRAPH CLASS
-class KnowledgeGraph:
-    def __init__(self):
-        self.graph = nx.DiGraph()
-
-
-    @staticmethod
-    def normalize_node(text):
-      text = text.replace("_", " ")
-      text = text.lower()
-      text = unicodedata.normalize("NFKC", text)
-      text = re.sub(r"\s+", " ", text)
-      return text.strip()
-
-    def build_graph(self, pages):
-        for page in pages:
-            title = self.normalize_node(page["title"])
-
-            self.graph.add_node(title)
-
-            for link in page["links"]:
-                target = self.normalize_node(link.split("/wiki/")[-1])
-
-                self.graph.add_edge(title, target)
-
-
-
-
-
-
 #CRAWLER CLASSES
-class Frontier:
-    def __init__(self):
-        self.queue = []
-        self.visited = set()
-
-    def add_url(self, url, score=0):
-        if url not in self.visited:
-            heapq.heappush(self.queue, (-score, url))
-            self.visited.add(url)
-
-    def get_next(self):
-        if self.queue:
-            return heapq.heappop(self.queue)[1]
-        return None
-
-
-
-class HttpClient:
-  def fetch(self, url):
-    response = req.get(url, headers=headers, timeout=5)
-    response.raise_for_status()
-    return response.text
-
-
-class LinkExtractor:
-    @staticmethod
-    def extract_links(html_content, xpath_rule):
-        tree = html.fromstring(html_content)
-        return tree.xpath(xpath_rule)
-
-    @staticmethod
-    def extract_summary(html_content):
-        tree = html.fromstring(html_content)
-
-        paragraphs = tree.xpath("//*[@id='mw-content-text']//div[contains(@class,'mw-parser-output')]/p[not(@class)][1]")
-
-        raw_text = " ".join([p.text_content() for p in paragraphs])
-
-        raw_text = re.sub(r"\[\d+\]", "", raw_text)
-        raw_text = re.sub(r"\s+", " ", raw_text)
-
-        # print(raw_text)
-        # print("Summary extracted", raw_text)
-
-        return " ".join(raw_text.split()[:200])
-
-    @staticmethod
-    def extract_title(html_content):
-        tree = html.fromstring(html_content)
-
-        title = tree.xpath("//h1[@id='firstHeading']//text()")
-
-        return title[0].strip() if title else ""
-
-
-class LinkSanitizer:
-    def __init__(self, domain):
-        self.domain = domain
-        print(self.domain)
-
-    def sanitize(self, base_url, links):
-      seen = set()
-      result = []
-
-      for link in links:
-
-          # Extract href safely
-          if hasattr(link, "get"):
-              href = link.get("href")
-          else:
-              href = str(link)
-
-          if not href:
-              continue
-
-          if href.startswith("#"):
-              continue
-
-          href = str(href)   # 🔥 force string
-
-          absolute = urljoin(str(base_url), href)
-          parsed = urlparse(absolute)
-
-          if parsed.netloc != self.domain:
-              continue
-
-          final_url = parsed._replace(fragment="").geturl()
-
-          if "/category/" in final_url:
-              continue
-
-          if final_url not in seen:
-              seen.add(final_url)
-              result.append(final_url)
-
-      return result
-
-      
-class Page:
-    def __init__(self, url, client, extractor, sanitizer):
-        if not url:
-            raise ValueError("URL cannot be empty")
-
-        self.url = url
-        self.client = client
-        self.extractor = extractor
-        self.sanitizer = sanitizer
-
-        self.child_links = []
-        self.summary = ""
-        self.title = ""
-
-
-    def crawl(self, each_page_data):
-
-        html_content = self.client.fetch(self.url)
-
-        #DEFAULT XPATH
-        # raw_links = LinkExtractor.extract_links(
-        #     html_content,
-        #     "//table[contains(@class,'infobox')]//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]/@href"
-        # )
-
-
-        raw_links = LinkExtractor.extract_links(
-            html_content,
-            """
-            //div[contains(@class,'mw-parser-output')]
-            //p//a[starts-with(@href,'/wiki/')
-            and not(contains(@href,':'))]
-            """
-        )
-
-        #ALT 1 
-        # raw_links = LinkExtractor.extract_links(
-        #     html_content,
-        #     """
-        #     //table[contains(@class,'infobox')]//a[
-        #         starts-with(@href,'/wiki/')
-        #         and not(contains(@href,':'))
-        #     ]/@href
-        #     |
-        #     //div[@class='mw-parser-output']//p//a[
-        #         starts-with(@href,'/wiki/')
-        #         and not(contains(@href,':'))
-        #     ]/@href
-        #     |
-        #     //div[@class='mw-parser-output']//li//a[
-        #         starts-with(@href,'/wiki/')
-        #         and not(contains(@href,':'))
-        #     ]/@href
-        #     """
-        # )
-
-
-        #ALT 2 
-        # raw_links = LinkExtractor.extract_links(
-        #     html_content,
-        #     """
-        #     //table[contains(@class,'infobox')]//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]
-        #     |
-        # //*[@id='mw-content-text']//div[contains(@class,'mw-parser-output')]/p//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]
-        #     """
-        # )
-
-        self.summary = LinkExtractor.extract_summary(html_content)
-        self.title = LinkExtractor.extract_title(html_content)
-
-        self.child_links = self.sanitizer.sanitize(self.url, raw_links)
-
-        print("Title:", self.title)
-        print("Summary:", self.summary[:100])
-        print("Extracted links count:", len(self.child_links))
-
-        each_page_data.append({
-            "title": self.title,
-            "url": self.url,
-            "summary": self.summary,
-            "links": self.child_links[:10] # CHANGE NUMBER OF LINK EDGES HERE
-        })
-
-        # print(each_page_data)
-
-        # print("Title:", self.title)
-        # print("Summary:", self.summary[:100])
-
-
-
 class CrawlerEngine:
   def __init__(self, depth_control, url, xpath):
     self.depth_control = depth_control
@@ -291,19 +53,18 @@ class CrawlerEngine:
     self.sanitizer = LinkSanitizer(domain)
 
     self.cluster_centroid = None
-    self.cluster_vectors = []   
+    self.cluster_vectors = []
 
     self.embedder = SentenceTransformer("all-MiniLM-L6-v2")
     self.embedding_cache = {}
 
-  
+
   @staticmethod
   def simple_link_score(url, summary=""):
       name = url.split("/wiki/")[-1]
 
       score = len(name)
 
-      # Bonus if summary contains link name
       if name.lower() in summary.lower():
           score += 50
 
@@ -352,11 +113,21 @@ class CrawlerEngine:
 
 
           for link in page.child_links:
-            score = self.simple_link_score(link, page.summary)             
+            score = self.simple_link_score(link, page.summary)
             self.frontier.add_url(link, score)
 
           time.sleep(2)
+
+
+
       print(self.each_page_data)
+
+
+  def generate_knowledge_graph(self):
+    kg = KnowledgeGraph()
+    kg.build_graph(self.each_page_data)
+
+    visualize_graph(kg.graph)
 
 
 
@@ -391,7 +162,7 @@ class CrawlerEngine:
 
 if __name__ == "__main__":
 
-  
+
   #BOOKS TO SCRAPE
   # url = "https://books.toscrape.com/"
 
@@ -407,20 +178,23 @@ if __name__ == "__main__":
   #ARTIFICAL INTELLIGENCE
   # url = "https://en.wikipedia.org/wiki/Artificial_intelligence"
 
-  url = "https://en.wikipedia.org/wiki/Human_intelligence"
+  # url = "https://en.wikipedia.org/wiki/Human_intelligence"
+
+  # url = "https://en.wikipedia.org/wiki/Black_hole"
+
+  # url = "https://en.wikipedia.org/wiki/Mary,_mother_of_Jesus"
+
+  url = "https://en.wikipedia.org/wiki/Donoghue_v_Stevenson"
 
   domain = urlparse(url).netloc
 
-  depth_control = 150
+  depth_control = 20
 
   crawler = CrawlerEngine(depth_control, url, all_links_xpath)
   crawler.start_crawl_bfs()
   crawler.store_data()
 
-  kg = KnowledgeGraph()
-  kg.build_graph(crawler.each_page_data)
-
-  visualize_graph(kg.graph)
+  crawler.generate_knowledge_graph()
 
 
 

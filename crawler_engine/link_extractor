@@ -1,0 +1,33 @@
+import re
+import unicodedata
+
+
+class LinkExtractor:
+    @staticmethod
+    def extract_links(html_content, xpath_rule):
+        tree = html.fromstring(html_content)
+        return tree.xpath(xpath_rule)
+
+    @staticmethod
+    def extract_summary(html_content):
+        tree = html.fromstring(html_content)
+
+        paragraphs = tree.xpath("//*[@id='mw-content-text']//div[contains(@class,'mw-parser-output')]/p[not(@class)][1]")
+
+        raw_text = " ".join([p.text_content() for p in paragraphs])
+
+        raw_text = re.sub(r"\[\d+\]", "", raw_text)
+        raw_text = re.sub(r"\s+", " ", raw_text)
+
+        # print(raw_text)
+        # print("Summary extracted", raw_text)
+
+        return " ".join(raw_text.split()[:200])
+
+    @staticmethod
+    def extract_title(html_content):
+        tree = html.fromstring(html_content)
+
+        title = tree.xpath("//h1[@id='firstHeading']//text()")
+
+        return title[0].strip() if title else ""
