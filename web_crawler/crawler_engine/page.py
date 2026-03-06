@@ -1,7 +1,7 @@
-from crawler_engine.frontier import Frontier
-from crawler_engine.httpclient import HttpClient
-from crawler_engine.link_extractor import LinkExtractor
-from crawler_engine.link_sanitizer import LinkSanitizer
+# from crawler_engine.frontier import Frontier
+# from crawler_engine.httpclient import HttpClient
+# from crawler_engine.link_extractor import LinkExtractor
+# from crawler_engine.link_sanitizer import LinkSanitizer
 
 class Page:
     def __init__(self, url, client, extractor, sanitizer):
@@ -29,7 +29,7 @@ class Page:
         # )
 
 
-        raw_links = LinkExtractor.extract_links(
+        raw_links = self.extractor.extract_links(
             html_content,
             """
             //div[contains(@class,'mw-parser-output')]
@@ -70,8 +70,8 @@ class Page:
         #     """
         # )
 
-        self.summary = LinkExtractor.extract_summary(html_content)
-        self.title = LinkExtractor.extract_title(html_content)
+        self.summary = self.extractor.extract_summary(html_content)
+        self.title = self.extractor.extract_title(html_content)
 
         self.child_links = self.sanitizer.sanitize(self.url, raw_links)
 

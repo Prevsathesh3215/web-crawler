@@ -1,0 +1,6 @@
+knowledge_graph.html
+pages.json
+
+/venv
+/__pycache__
+/web_crawler/__pycache__

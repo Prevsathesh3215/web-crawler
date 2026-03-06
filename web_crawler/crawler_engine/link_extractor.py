@@ -1,5 +1,7 @@
 import re
 import unicodedata
+from lxml import html
+
 
 
 class LinkExtractor:

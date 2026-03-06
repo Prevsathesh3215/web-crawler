@@ -1,3 +1,8 @@
+import networkx as nx
+import unicodedata
+import re
+from pyvis.network import Network
+from IPython.display import IFrame
 
 #KNOWLEDGE GRAPH CLASS
 class KnowledgeGraph:
@@ -48,5 +53,5 @@ def visualize_graph(graph):
     for source, target in graph.edges():
         net.add_edge(source, target)
 
-    net.show("knowledge_graph.html")
+    net.write_html("knowledge_graph.html", open_browser=False)
     IFrame("knowledge_graph.html", width=900, height=600)

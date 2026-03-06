@@ -1,28 +1,18 @@
-from lxml import html
-import requests as req
-import aiohttp
-import asyncio
-import time
 from urllib.parse import urljoin, urlparse, urlunparse
-from collections import deque
 import time
-import re
-import networkx as nx
 import json
-from pyvis.network import Network
-from IPython.display import IFrame
-import unicodedata
-import heapq
 from sentence_transformers import SentenceTransformer
 import numpy as np
-from crawler_engine.frontier import Frontier
-from crawler_engine.httpclient import HttpClient
-from crawler_engine.link_extractor import LinkExtractor
-from crawler_engine.link_sanitizer import LinkSanitizer
-from crawler_engine.page import Page
-from knowledge_graph.visualiser import KnowledgeGraph, visualize_graph
+from web_crawler.crawler_engine.frontier import Frontier
+from web_crawler.crawler_engine.httpclient import HttpClient
+from web_crawler.crawler_engine.link_extractor import LinkExtractor
+from web_crawler.crawler_engine.link_sanitizer import LinkSanitizer
+from web_crawler.crawler_engine.page import Page
+from web_crawler.knowledge_graph.visualiser import KnowledgeGraph, visualize_graph
+import sys
 
 
+sys.stdout.reconfigure(encoding='utf-8')
 article_path = "//article"
 article_link = "h3/a/@href"
 all_links_xpath = "//table[contains(@class,'infobox')]//a[starts-with(@href,'/wiki/') and not(contains(@href,':'))]/@href"
@@ -33,13 +23,15 @@ all_links_xpath = "//table[contains(@class,'infobox')]//a[starts-with(@href,'/wi
 # """
 all_summaries = "//p"
 headers = {
-    "User-Agent": "MyKnowledgeGraphBot/1.0 (prevsathesh3215@gmail.com)"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
 }
 
 #CRAWLER CLASSES
 class CrawlerEngine:
   def __init__(self, depth_control, url, xpath):
     self.depth_control = depth_control
+    self.domain = urlparse(url).netloc
     self.url = url
     self.xpath = xpath
     self.accessed_sites = []
@@ -48,15 +40,17 @@ class CrawlerEngine:
     self.frontier = Frontier()
     self.frontier.add_url(url)
 
-    self.client = HttpClient()
+    self.client = HttpClient(headers=headers)
     self.extractor = LinkExtractor()
-    self.sanitizer = LinkSanitizer(domain)
+    self.sanitizer = LinkSanitizer(self.domain)
 
     self.cluster_centroid = None
     self.cluster_vectors = []
 
     self.embedder = SentenceTransformer("all-MiniLM-L6-v2")
     self.embedding_cache = {}
+
+
 
 
   @staticmethod
@@ -186,9 +180,7 @@ if __name__ == "__main__":
 
   url = "https://en.wikipedia.org/wiki/Donoghue_v_Stevenson"
 
-  domain = urlparse(url).netloc
-
-  depth_control = 20
+  depth_control = 1
 
   crawler = CrawlerEngine(depth_control, url, all_links_xpath)
   crawler.start_crawl_bfs()
