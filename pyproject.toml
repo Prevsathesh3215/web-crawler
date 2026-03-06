@@ -1,0 +1,24 @@
+[project]
+name = "web-crawler-engine"
+version = "0.1.2"
+description = "Semantic crawler with knowledge graph builder"
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.10"
+
+dependencies = [
+    "requests",
+    "aiohttp",
+    "lxml",
+    "networkx",
+    "pyvis",
+    "sentence-transformers",
+    "numpy"
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project.scripts]
+webcrawler = "web_crawler.__main__:main"

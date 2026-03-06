@@ -53,5 +53,8 @@ def visualize_graph(graph):
     for source, target in graph.edges():
         net.add_edge(source, target)
 
-    net.write_html("knowledge_graph.html", open_browser=False)
-    IFrame("knowledge_graph.html", width=900, height=600)
+        html = net.generate_html()
+
+        with open("knowledge_graph.html", "w", encoding="utf-8") as f:
+            f.write(html)
+        IFrame("knowledge_graph.html", width=900, height=600)

@@ -1,6 +1,11 @@
 knowledge_graph.html
 pages.json
 
+dist
 /venv
-/__pycache__
-/web_crawler/__pycache__
+__pycache__
+web_crawler/__pycache__
+web_crawler/crawler_engine/__pycache__
+web_crawler/knowledge_graph/__pycache__
+
+web_crawler_engine.egg-info

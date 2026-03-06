@@ -29,7 +29,7 @@ headers = {
 
 #CRAWLER CLASSES
 class CrawlerEngine:
-  def __init__(self, depth_control, url, xpath):
+  def __init__(self, depth_control, url, xpath=all_links_xpath):
     self.depth_control = depth_control
     self.domain = urlparse(url).netloc
     self.url = url
@@ -154,7 +154,7 @@ class CrawlerEngine:
 
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
 
   #BOOKS TO SCRAPE
@@ -174,19 +174,19 @@ if __name__ == "__main__":
 
   # url = "https://en.wikipedia.org/wiki/Human_intelligence"
 
-  url = "https://en.wikipedia.org/wiki/Black_hole"
+  # url = "https://en.wikipedia.org/wiki/Black_hole"
 
   # url = "https://en.wikipedia.org/wiki/Mary,_mother_of_Jesus"
 
   # url = "https://en.wikipedia.org/wiki/Donoghue_v_Stevenson"
 
-  depth_control = 30
+  # depth_control = 30
 
-  crawler = CrawlerEngine(depth_control, url, all_links_xpath)
-  crawler.start_crawl_bfs()
-  crawler.store_data()
+  # crawler = CrawlerEngine(depth_control, url, all_links_xpath)
+  # crawler.start_crawl_bfs()
+  # crawler.store_data()
 
-  crawler.generate_knowledge_graph()
+  # crawler.generate_knowledge_graph()
 
 
   # TO RUN: python -m web_crawler
