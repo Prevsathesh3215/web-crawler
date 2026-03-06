@@ -114,7 +114,7 @@ class CrawlerEngine:
 
 
 
-      print(self.each_page_data)
+      # print(self.each_page_data) #TO VIEW CRAWLED DATA
 
 
   def generate_knowledge_graph(self):
@@ -174,13 +174,13 @@ if __name__ == "__main__":
 
   # url = "https://en.wikipedia.org/wiki/Human_intelligence"
 
-  # url = "https://en.wikipedia.org/wiki/Black_hole"
+  url = "https://en.wikipedia.org/wiki/Black_hole"
 
   # url = "https://en.wikipedia.org/wiki/Mary,_mother_of_Jesus"
 
-  url = "https://en.wikipedia.org/wiki/Donoghue_v_Stevenson"
+  # url = "https://en.wikipedia.org/wiki/Donoghue_v_Stevenson"
 
-  depth_control = 1
+  depth_control = 30
 
   crawler = CrawlerEngine(depth_control, url, all_links_xpath)
   crawler.start_crawl_bfs()
@@ -189,5 +189,5 @@ if __name__ == "__main__":
   crawler.generate_knowledge_graph()
 
 
-
+  # TO RUN: python -m web_crawler
 
