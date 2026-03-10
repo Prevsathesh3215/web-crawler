@@ -20,7 +20,7 @@ pip install web-crawler-engine
 ```
 
 ### HOW TO USE
-```python
+```json
 from web_crawler import CrawlerEngine
 
 url = "https://en.wikipedia.org/wiki/Artificial_intelligence"
