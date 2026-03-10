@@ -15,12 +15,12 @@ For now, the crawler can only crawl Wikipedia pages, will return error for any o
 
 ## Installation
 
-```bash
+```python
 pip install web-crawler-engine
 ```
 
 ### HOW TO USE
-```
+```python
 from web_crawler import CrawlerEngine
 
 url = "https://en.wikipedia.org/wiki/Artificial_intelligence"
