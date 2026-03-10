@@ -15,12 +15,12 @@ For now, the crawler can only crawl Wikipedia pages, will return error for any o
 
 ## Installation
 
-```python
+```bash
 pip install web-crawler-engine
 ```
 
 ### HOW TO USE
-```json
+```python
 from web_crawler import CrawlerEngine
 
 url = "https://en.wikipedia.org/wiki/Artificial_intelligence"
@@ -36,7 +36,7 @@ crawler.generate_knowledge_graph() #generates a html of a directed graph of page
 ```
 
 ### JSON example
-```
+```json
   {
     "title": "Black hole",
     "url": "https://en.wikipedia.org/wiki/Black_hole",
